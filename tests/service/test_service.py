@@ -59,7 +59,27 @@ class ServerTests(unittest.TestCase):
         settings_fn.return_value = mock_settings
         _reset_daos()
         c1 = get_encounter_dao().get_count()
-        _ = self.client.post(
+        resp = self.client.post(
+            "/encounters",
+            headers=headers,
+            json={
+                "idempotence_key": "abc",
+                "patient_id": "p123",
+                "provider_id": "pr456",
+                "encounter_date": "2026-01-01",
+                "encounter_type": "initial_assessment",
+                "clinical_data": {},
+            },
+        )
+        self.assertEqual(200, resp.status_code)
+        self.assertEqual(c1 + 1, get_encounter_dao().get_count())
+        self.assertEqual(1, get_audit_dao().get_count())
+
+    @patch("encounters.service.settings")
+    def test_bad_literals(self, settings_fn):
+        settings_fn.return_value = mock_settings
+        _reset_daos()
+        resp = self.client.post(
             "/encounters",
             headers=headers,
             json={
@@ -67,12 +87,12 @@ class ServerTests(unittest.TestCase):
                 "patient_id": "p123",
                 "provider_id": "pr456",
                 "encounter_date": utcnow().isoformat(),
-                "encounter_type": "inital_assessment",
+                "encounter_type": "south_park",
                 "clinical_data": {},
             },
         )
-        self.assertEqual(c1 + 1, get_encounter_dao().get_count())
-        self.assertEqual(1, get_audit_dao().get_count())
+        self.assertEqual(400, resp.status_code)
+        self.assertTrue("encounter_type" in resp.text)
 
     @patch("encounters.service.settings")
     def test_get_encounter(self, settings_fn):
@@ -130,8 +150,8 @@ class ServerTests(unittest.TestCase):
                 "idempotence_key": "abc",
                 "patient_id": "p123",
                 "provider_id": "pr456",
-                "encounter_date": utcnow().isoformat(),
-                "encounter_type": "inital_assessment",
+                "encounter_date": "2026-01-01",
+                "encounter_type": "initial_assessment",
                 "clinical_data": {},
             },
         )
