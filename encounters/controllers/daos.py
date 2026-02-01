@@ -19,8 +19,8 @@ class EncounterDao:
         self.encounters[enc.encounter_id] = enc
         logger.debug(f"There are now {len(self.encounters)} encounters")
 
-    def get_encounter(self):
-        pass
+    def get_encounter(self, encounter_id):
+        return self.encounters[encounter_id]
 
     def get_count(self):
         return len(self.encounters)
