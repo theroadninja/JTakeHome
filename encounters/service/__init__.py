@@ -35,8 +35,11 @@ class Settings(BaseSettings):
 _settings = None
 app = FastAPI()
 
+
 def settings() -> Settings:
     return _settings
+
+
 # ##########
 
 # @app.exception_handler(Exception)
@@ -45,6 +48,7 @@ def settings() -> Settings:
 #         status_code=400,
 #         content="An error occurred",
 #     )
+
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request, exc: RequestValidationError):
@@ -78,8 +82,8 @@ async def root(key: str = Depends(header_scheme)):
 
 @app.post("/encounters")
 async def add_encounter(
-        encounter: PendingEncounter,
-        key: str = Depends(header_scheme),
+    encounter: PendingEncounter,
+    key: str = Depends(header_scheme),
 ):
     # logger = logging.getLogger("server")
     if key != settings().api_key:

@@ -1,6 +1,7 @@
 """
 The business logic for encounters service.
 """
+
 import datetime
 import logging
 import uuid
@@ -9,8 +10,8 @@ from zoneinfo import ZoneInfo
 from .daos import get_encounter_dao
 from ..models.encounters import PendingEncounter, Encounter, Metadata
 
-
 UTC = ZoneInfo("UTC")
+
 
 def utcnow():
     # datetime.utcnow() is deprecated :(
@@ -20,6 +21,7 @@ def utcnow():
 def is_duplicate_request(idemp_key):
     """Idempotence check"""
     return False
+
 
 def add_encounter(pe: PendingEncounter, now=None):
     logger = logging.getLogger("controller")

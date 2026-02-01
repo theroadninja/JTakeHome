@@ -1,6 +1,7 @@
 """
 Data Access Objects for Encounter Service
 """
+
 import logging
 
 from encounters.models import Encounter
