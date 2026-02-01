@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Literal
 
 from pydantic import BaseModel
 
@@ -13,4 +13,5 @@ class AccessLogEntry(BaseModel):
     username: str  # who access it
     item_type: str  # encounter
     item_id: str  # encounter id
-    access_type: str  # create, read
+    # noinspection PyTypeHints
+    access_type: Literal[CREATE, READ]
