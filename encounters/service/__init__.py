@@ -93,7 +93,6 @@ async def get_encounter(
     if key != settings().api_key:
         return header_scheme.make_not_authenticated_error()
 
-    # TODO nice error message if it doesnt exist
     try:
         return controller.get_encounter(encounter_id)
     except KeyError:
