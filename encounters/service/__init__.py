@@ -30,7 +30,7 @@ class Settings(BaseSettings):
     log_level: str = "DEBUG"
 
 
-# ##########
+# ####################################
 # globals forced by fastapi's design
 _settings = None
 app = FastAPI()
@@ -40,14 +40,7 @@ def settings() -> Settings:
     return _settings
 
 
-# ##########
-
-# @app.exception_handler(Exception)
-# async def exception_handler_override(request: Request, ex: Exception):
-#     return JSONResponse(
-#         status_code=400,
-#         content="An error occurred",
-#     )
+# ####################################
 
 
 @app.exception_handler(RequestValidationError)
@@ -85,7 +78,6 @@ async def add_encounter(
     encounter: PendingEncounter,
     key: str = Depends(header_scheme),
 ):
-    # logger = logging.getLogger("server")
     if key != settings().api_key:
         return header_scheme.make_not_authenticated_error()
 

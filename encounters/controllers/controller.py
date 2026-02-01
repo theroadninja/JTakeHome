@@ -2,7 +2,7 @@
 The business logic for encounters service.
 """
 
-import datetime
+from datetime import datetime
 import logging
 import uuid
 from zoneinfo import ZoneInfo
@@ -13,9 +13,9 @@ from ..models.encounters import PendingEncounter, Encounter, Metadata
 UTC = ZoneInfo("UTC")
 
 
-def utcnow():
-    # datetime.utcnow() is deprecated :(
-    return datetime.datetime.now(UTC)
+def utcnow() -> datetime:
+    """get the current UTC time as dt-aware datetime"""
+    return datetime.now(UTC)
 
 
 def is_duplicate_request(idemp_key):
@@ -46,8 +46,5 @@ def add_encounter(pe: PendingEncounter, now=None):
     )
 
     dao.add_encounter(item)
-    # TODO impl
-
-    # TODO add to audit
 
     return new_id
