@@ -3,6 +3,7 @@ from typing import Any, Literal, Annotated
 
 from pydantic import BaseModel, AfterValidator
 
+
 def expect_iso_date(s):
     """
     Throw a ValueError if s is not an ISO8601 string.
@@ -11,6 +12,7 @@ def expect_iso_date(s):
         raise ValueError(f"not a valid ISO8601 date")
     return s
 
+
 def expect_iso_datetime(s):
     """
     Throw a ValueError if s is not an ISO8601 string.
@@ -18,6 +20,7 @@ def expect_iso_datetime(s):
     if not re.match(r"^\d\d\d\d-\d\d-\d\d[ T].*", s):
         raise ValueError(f"not a valid ISO8601 date")
     return s
+
 
 class Metadata(BaseModel):
     created_at: Annotated[str, AfterValidator(expect_iso_datetime)]
