@@ -11,8 +11,9 @@ class Metadata(BaseModel):
 
 
 class PendingEncounter(BaseModel):
+    idempotence_key: str
     # no encounter id yet
-    metadata: Metadata
+    username: str
     patient_id: str
     provider_id: str
     encounter_date: str  # "timestamp"
