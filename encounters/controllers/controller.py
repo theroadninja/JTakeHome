@@ -23,7 +23,7 @@ def is_duplicate_request(idemp_key):
     return False
 
 
-def add_encounter(pe: PendingEncounter, now=None):
+def add_encounter(pe: PendingEncounter, now=None) -> str:
     logger = logging.getLogger("controller")
     logger.debug("Adding pending encounter")
 
@@ -48,3 +48,11 @@ def add_encounter(pe: PendingEncounter, now=None):
     dao.add_encounter(item)
 
     return new_id
+
+
+def get_encounter(encounter_id: str) -> Encounter:
+    """
+    Throws a KeyError if the encounter doesnt exist.
+    """
+    dao = get_encounter_dao()
+    return dao.get_encounter(encounter_id)

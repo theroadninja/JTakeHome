@@ -7,7 +7,7 @@ I am trying to contain all of fastapi's strangeness here.
 import logging
 from http.client import HTTPException
 
-from fastapi import FastAPI, Depends, Request
+from fastapi import FastAPI, Depends, HTTPException
 from fastapi.responses import JSONResponse, PlainTextResponse
 from fastapi.exceptions import RequestValidationError
 from fastapi.security import APIKeyHeader
@@ -83,3 +83,21 @@ async def add_encounter(
 
     new_id = controller.add_encounter(encounter)
     return {"encounter_id": new_id}
+
+
+@app.get("/encounters/{encounter_id}")
+async def get_encounter(
+    encounter_id: str,
+    key: str = Depends(header_scheme),
+):
+    if key != settings().api_key:
+        return header_scheme.make_not_authenticated_error()
+
+    # TODO nice error message if it doesnt exist
+    try:
+        return controller.get_encounter(encounter_id)
+    except KeyError:
+        raise HTTPException(
+            status_code=400,  # BAD REQUEST
+            detail="That encounter does not exist",
+        )
