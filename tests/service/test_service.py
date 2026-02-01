@@ -1,11 +1,12 @@
+import time
 import unittest
 from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 from encounters.service import app, Settings
 from encounters.controllers.controller import utcnow
-from encounters.controllers.daos import get_encounter_dao
-from encounters.models import Encounter, Metadata
+from encounters.controllers.daos import get_encounter_dao, _reset_daos, get_audit_dao
+from encounters.models import Encounter, Metadata, AccessLogEntry
 
 mock_settings = Settings(
     api_key="U",
@@ -41,20 +42,28 @@ class ServerTests(unittest.TestCase):
         self.client = TestClient(app)
 
     @patch("encounters.service.settings")
-    def test_root(self, settings_fn):
+    def test_unauthorized(self, settings_fn):
         settings_fn.return_value = mock_settings
-        _ = self.client.get("/", headers=headers)
+
+        resp = self.client.get("/status")
+        self.assertEqual(401, resp.status_code)
+
+        resp = self.client.get(
+            "/status",
+            headers=headers,
+        )
+        self.assertEqual(200, resp.status_code)
 
     @patch("encounters.service.settings")
     def test_add_encounter(self, settings_fn):
         settings_fn.return_value = mock_settings
+        _reset_daos()
         c1 = get_encounter_dao().get_count()
         _ = self.client.post(
             "/encounters",
             headers=headers,
             json={
                 "idempotence_key": "abc",
-                "username": "dcupp",
                 "patient_id": "p123",
                 "provider_id": "pr456",
                 "encounter_date": utcnow().isoformat(),
@@ -63,10 +72,12 @@ class ServerTests(unittest.TestCase):
             },
         )
         self.assertEqual(c1 + 1, get_encounter_dao().get_count())
+        self.assertEqual(1, get_audit_dao().get_count())
 
     @patch("encounters.service.settings")
     def test_get_encounter(self, settings_fn):
         settings_fn.return_value = mock_settings
+        _reset_daos()
 
         eid = "9a7136"
         enc = make_test_encounter(eid)
@@ -79,10 +90,12 @@ class ServerTests(unittest.TestCase):
         )
         enc2 = Encounter(**resp.json())
         self.assertEqual(enc, enc2)
+        self.assertEqual(1, get_audit_dao().get_count())
 
     @patch("encounters.service.settings")
     def test_get_encounter_doesnt_exist(self, settings_fn):
         settings_fn.return_value = mock_settings
+        _reset_daos()
 
         eid = "0a8245"
         resp = self.client.get(
@@ -91,3 +104,69 @@ class ServerTests(unittest.TestCase):
         )
         self.assertEqual(400, resp.status_code)
         self.assertTrue("does not exist" in resp.text)
+        self.assertEqual(0, get_audit_dao().get_count())
+
+    @patch("encounters.service.settings")
+    def test_list_audit_empty(self, settings_fn):
+        settings_fn.return_value = mock_settings
+        _reset_daos()
+
+        resp = self.client.get(
+            f"/audit/encounters",
+            headers=headers,
+        )
+        self.assertEqual(200, resp.status_code)
+        mylist = resp.json()
+        self.assertEqual(0, len(mylist))
+
+    @patch("encounters.service.settings")
+    def test_audit_log(self, settings_fn):
+        settings_fn.return_value = mock_settings
+        _reset_daos()
+        resp = self.client.post(
+            "/encounters",
+            headers=headers,
+            json={
+                "idempotence_key": "abc",
+                "patient_id": "p123",
+                "provider_id": "pr456",
+                "encounter_date": utcnow().isoformat(),
+                "encounter_type": "inital_assessment",
+                "clinical_data": {},
+            },
+        )
+        self.assertEqual(200, resp.status_code)
+        encounter1 = resp.json()["encounter_id"]
+
+        resp = self.client.get(
+            f"/encounters/{encounter1}",
+            headers=headers,
+        )
+        self.assertEqual(200, resp.status_code)
+        resp = self.client.get(
+            f"/encounters/{encounter1}",
+            headers=headers,
+        )
+        self.assertEqual(200, resp.status_code)
+
+        # no time params
+        url = f"/audit/encounters"
+        resp = self.client.get(url, headers=headers)
+        self.assertEqual(200, resp.status_code)
+        mylist = resp.json()
+        self.assertEqual(3, len(mylist))
+
+        mylist = [AccessLogEntry(**i) for i in mylist]
+
+        for i in range(3):
+            self.assertEqual(encounter1, mylist[i].item_id)
+        self.assertEqual("create", mylist[0].access_type)
+        self.assertEqual("read", mylist[1].access_type)
+        self.assertEqual("read", mylist[1].access_type)
+
+        end_ms = int(time.time() * 1000) + 2000
+        url = f"/audit/encounters?start_ms=0&end_ms={end_ms}"
+        resp = self.client.get(url, headers=headers)
+        self.assertEqual(200, resp.status_code)
+        mylist = resp.json()
+        self.assertEqual(3, len(mylist))

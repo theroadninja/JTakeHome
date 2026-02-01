@@ -11,7 +11,6 @@ class Metadata(BaseModel):
 
 class PendingEncounter(BaseModel):
     idempotence_key: str
-    username: str
     patient_id: str
     provider_id: str
     encounter_date: str

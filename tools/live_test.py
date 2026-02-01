@@ -19,7 +19,6 @@ if __name__ == "__main__":
         headers=headers,
         json={
             "idempotence_key": "abc",
-            "username": "dcupp",
             "patient_id": "p123",
             "provider_id": "pr456",
             "encounter_date": utcnow().isoformat(),

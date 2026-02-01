@@ -4,10 +4,13 @@ The business logic for encounters service.
 
 from datetime import datetime
 import logging
+import time
 import uuid
+from typing import List
 from zoneinfo import ZoneInfo
 
-from .daos import get_encounter_dao
+from .daos import get_encounter_dao, get_audit_dao
+from ..models import AccessLogEntry, TYPE_ENCOUNTER, CREATE, READ
 from ..models.encounters import PendingEncounter, Encounter, Metadata
 
 UTC = ZoneInfo("UTC")
@@ -23,7 +26,12 @@ def is_duplicate_request(idemp_key):
     return False
 
 
-def add_encounter(pe: PendingEncounter, now=None) -> str:
+def username_from_key(api_key):
+    # pretend there is a mapping from api_key to username
+    return "dcupp"
+
+
+def add_encounter(username: str, pe: PendingEncounter, now=None) -> str:
     logger = logging.getLogger("controller")
     logger.debug("Adding pending encounter")
 
@@ -36,7 +44,7 @@ def add_encounter(pe: PendingEncounter, now=None) -> str:
         metadata=Metadata(
             created_at=created_at,
             updated_at=created_at,
-            created_by=pe.username,
+            created_by=username,
         ),
         patient_id=pe.patient_id,
         provider_id=pe.provider_id,
@@ -46,13 +54,37 @@ def add_encounter(pe: PendingEncounter, now=None) -> str:
     )
 
     dao.add_encounter(item)
+    get_audit_dao().add_entry(
+        AccessLogEntry(
+            timestamp_epoch_ms=int(time.time() * 1000),
+            username=username,
+            item_type=TYPE_ENCOUNTER,
+            item_id=new_id,
+            access_type=CREATE,
+        )
+    )
 
     return new_id
 
 
-def get_encounter(encounter_id: str) -> Encounter:
+def get_encounter(username: str, encounter_id: str) -> Encounter:
     """
     Throws a KeyError if the encounter doesnt exist.
     """
     dao = get_encounter_dao()
-    return dao.get_encounter(encounter_id)
+    enc = dao.get_encounter(encounter_id)
+    get_audit_dao().add_entry(
+        AccessLogEntry(
+            timestamp_epoch_ms=int(time.time() * 1000),
+            username=username,
+            item_type=TYPE_ENCOUNTER,
+            item_id=encounter_id,
+            access_type=READ,
+        )
+    )
+    return enc
+
+
+def list_audit_entries(start_ms: int, end_ms: int) -> List[AccessLogEntry]:
+    dao = get_audit_dao()
+    return dao.list_entries(start_ms, end_ms)

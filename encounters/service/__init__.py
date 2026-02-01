@@ -8,7 +8,7 @@ import logging
 from http.client import HTTPException
 
 from fastapi import FastAPI, Depends, HTTPException
-from fastapi.responses import JSONResponse, PlainTextResponse
+from fastapi.responses import PlainTextResponse
 from fastapi.exceptions import RequestValidationError
 from fastapi.security import APIKeyHeader
 from pydantic_settings import BaseSettings
@@ -57,17 +57,18 @@ def startup():
     _settings = Settings()
     setup_logging(settings().log_level)
     logger = logging.getLogger("server")
-    logger.info("STARTUP LOG 123-123-1234")
+    logger.info("server starting up in @startup()")
 
 
-@app.get("/")
-async def root(key: str = Depends(header_scheme)):
-    logger = logging.getLogger("server")
+@app.get("/status")
+async def get_status(
+    key: str = Depends(header_scheme),
+):
     if key != settings().api_key:
         return header_scheme.make_not_authenticated_error()
 
-    logger.info("TEST LOG 123-123-1234")
-    return {"test": "hello", "k": key}
+    return {"status": "ok"}
+
 
 
 @app.post("/encounters")
@@ -81,7 +82,8 @@ async def add_encounter(
     if controller.is_duplicate_request(encounter.idempotence_key):
         raise Exception("idempotence not implemented yet")
 
-    new_id = controller.add_encounter(encounter)
+    username = controller.username_from_key(key)
+    new_id = controller.add_encounter(username, encounter)
     return {"encounter_id": new_id}
 
 
@@ -94,9 +96,26 @@ async def get_encounter(
         return header_scheme.make_not_authenticated_error()
 
     try:
-        return controller.get_encounter(encounter_id)
+        username = controller.username_from_key(key)
+        return controller.get_encounter(username, encounter_id)
     except KeyError:
         raise HTTPException(
             status_code=400,  # BAD REQUEST
             detail="That encounter does not exist",
         )
+
+
+@app.get("/audit/encounters")
+async def list_audit_entries(
+    start_ms: int = -1,  # this is query_param
+    end_ms: int = None,  # this is a query_param
+    key: str = Depends(header_scheme),
+):
+    """
+    start_ms and end_ms are both query parameters
+    """
+    if key != settings().api_key:
+        return header_scheme.make_not_authenticated_error()
+
+    # fastapi auto converts this to json
+    return controller.list_audit_entries(start_ms, end_ms)
