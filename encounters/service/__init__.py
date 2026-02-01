@@ -40,9 +40,6 @@ def settings() -> Settings:
     return _settings
 
 
-# ####################################
-
-
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request, exc: RequestValidationError):
     """
