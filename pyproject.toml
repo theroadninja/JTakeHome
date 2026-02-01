@@ -1,0 +1,5 @@
+[tool.black]
+line-length = 110
+
+[tool.bandit]
+skips = ["B110", "B311", "B608"]
