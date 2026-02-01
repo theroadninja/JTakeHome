@@ -54,8 +54,6 @@ class AuditDao:
 
         return results
 
-
-
     def get_count(self):
         return len(self.audit_entries)
 

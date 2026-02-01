@@ -70,7 +70,6 @@ async def get_status(
     return {"status": "ok"}
 
 
-
 @app.post("/encounters")
 async def add_encounter(
     encounter: PendingEncounter,
