@@ -7,21 +7,13 @@ from encounters.service import app, Settings
 from encounters.controllers.controller import utcnow
 from encounters.controllers.daos import get_encounter_dao, _reset_daos, get_audit_dao
 from encounters.models import Encounter, Metadata, AccessLogEntry
+from encounters.utils import make_test_metadata
 
 mock_settings = Settings(
     api_key="U",
     log_level="DEBUG",
 )
 headers = {"x-api-key": "U"}
-
-
-def make_test_metadata():
-    now = utcnow().isoformat()
-    return Metadata(
-        created_at=now,
-        updated_at=now,
-        created_by=now,
-    )
 
 
 def make_test_encounter(eid=None):
@@ -190,3 +182,64 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(200, resp.status_code)
         mylist = resp.json()
         self.assertEqual(3, len(mylist))
+
+    def _list_encounters(
+        self,
+        start_date=None,
+        end_date=None,
+        patient_id=None,
+        provider_id=None,
+    ):
+        params = {
+            "start_date": start_date,
+            "end_date": end_date,
+            "patient_id": patient_id,
+            "provider_id": provider_id,
+        }
+        params = {k:v for k,v in params.items() if v}
+        resp = self.client.get("/encounters", params=params, headers=headers)
+        mylist = resp.json()
+        return [Encounter(**i) for i in mylist]
+
+    @patch("encounters.service.settings")
+    def test_list_encounters(self, settings_fn):
+        settings_fn.return_value = mock_settings
+        _reset_daos()
+        resp = self.client.post(
+            "/encounters",
+            headers=headers,
+            json={
+                "idempotence_key": "abc",
+                "patient_id": "p1",
+                "provider_id": "pr5",
+                "encounter_date": "2026-01-01",
+                "encounter_type": "initial_assessment",
+                "clinical_data": {},
+            },
+        )
+        self.assertEqual(200, resp.status_code)
+
+        resp = self.client.get(
+            "/encounters",
+            headers=headers,
+        )
+        self.assertEqual(200, resp.status_code)
+        mylist = resp.json()
+        self.assertEqual(1, len(mylist))
+
+        items = self._list_encounters()
+        self.assertEqual(1, len(items))
+
+        items = self._list_encounters(
+            patient_id="p1",
+            provider_id="pr5",
+        )
+        self.assertEqual(1, len(items))
+
+        items = self._list_encounters(
+            patient_id="p2",
+            provider_id="pr5",
+        )
+        self.assertEqual(0, len(items))
+
+

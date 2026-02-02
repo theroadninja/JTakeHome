@@ -3,6 +3,7 @@ Data Access Objects for Encounter Service
 """
 
 import logging
+from typing import Dict
 
 from encounters.models import Encounter, AccessLogEntry
 
@@ -10,7 +11,7 @@ from encounters.models import Encounter, AccessLogEntry
 class EncounterDao:
     def __init__(self):
         # map id -> encounter
-        self.encounters = dict()
+        self.encounters: Dict[str, Encounter] = dict()
 
     def add_encounter(self, enc: Encounter):
         logger = logging.getLogger("daos")
@@ -24,6 +25,26 @@ class EncounterDao:
 
     def get_count(self):
         return len(self.encounters)
+
+    def search_encounters(
+            self,
+            start_date: str = None,
+            end_date: str = None,
+            patient_id: str = None,
+            provider_id: str = None,
+    ):
+        results = []
+        for enc in self.encounters.values():
+            if start_date and start_date > enc.encounter_date:
+                continue
+            if end_date and end_date < enc.encounter_date:
+                continue
+            if patient_id and patient_id != enc.patient_id:
+                continue
+            if provider_id and provider_id != enc.provider_id:
+                continue
+            results.append(enc)
+        return results
 
 
 class AuditDao:

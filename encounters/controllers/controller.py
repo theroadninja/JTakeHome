@@ -31,6 +31,20 @@ def username_from_key(api_key):
     return "dcupp"
 
 
+def _now():
+    return int(time.time() * 1000)
+
+
+def _read_entry(timestamp, username, eid) -> AccessLogEntry:
+    return AccessLogEntry(
+        timestamp_epoch_ms=timestamp,
+        username=username,
+        item_type=TYPE_ENCOUNTER,
+        item_id=eid,
+        access_type=READ,
+    )
+
+
 def add_encounter(username: str, pe: PendingEncounter, now=None) -> str:
     logger = logging.getLogger("controller")
     logger.debug("Adding pending encounter")
@@ -73,16 +87,25 @@ def get_encounter(username: str, encounter_id: str) -> Encounter:
     """
     dao = get_encounter_dao()
     enc = dao.get_encounter(encounter_id)
-    get_audit_dao().add_entry(
-        AccessLogEntry(
-            timestamp_epoch_ms=int(time.time() * 1000),
-            username=username,
-            item_type=TYPE_ENCOUNTER,
-            item_id=encounter_id,
-            access_type=READ,
-        )
-    )
+
+    get_audit_dao().add_entry(_read_entry(_now(), username, encounter_id))
     return enc
+
+
+def list_encounters(
+    username: str,
+    start_date: str = None,
+    end_date: str = None,
+    patient_id: str = None,
+    provider_id: str = None,
+):
+    dao = get_encounter_dao()
+    audit = get_audit_dao()
+    results = dao.search_encounters(start_date, end_date, patient_id, provider_id)
+    ts = _now()
+    for enc in results:
+        audit.add_entry(_read_entry(ts, username, enc.encounter_id))
+    return results
 
 
 def list_audit_entries(start_ms: int, end_ms: int) -> List[AccessLogEntry]:

@@ -86,6 +86,22 @@ async def add_encounter(
     return {"encounter_id": new_id}
 
 
+@app.get("/encounters")
+async def list_encounters(
+        start_date: str = None,
+        end_date: str = None,
+        patient_id: str = None,
+        provider_id: str = None,
+        key: str = Depends(header_scheme),
+):
+    if key != settings().api_key:
+        return header_scheme.make_not_authenticated_error()
+
+    # TODO validate the start and end date!
+    username = controller.username_from_key(key)
+    return controller.list_encounters(username, start_date, end_date, patient_id, provider_id)
+
+
 @app.get("/encounters/{encounter_id}")
 async def get_encounter(
     encounter_id: str,

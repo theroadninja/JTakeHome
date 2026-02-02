@@ -4,15 +4,7 @@ from pydantic import ValidationError
 
 from encounters.models.encounters import Metadata, Encounter
 from encounters.controllers.controller import utcnow
-
-
-def make_test_metadata():
-    now = utcnow().isoformat()
-    return Metadata(
-        created_at=now,
-        updated_at=now,
-        created_by=now,
-    )
+from encounters.utils import make_test_metadata
 
 
 class EncounterModelsTests(unittest.TestCase):
