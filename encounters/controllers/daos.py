@@ -27,11 +27,11 @@ class EncounterDao:
         return len(self.encounters)
 
     def search_encounters(
-            self,
-            start_date: str = None,
-            end_date: str = None,
-            patient_id: str = None,
-            provider_id: str = None,
+        self,
+        start_date: str = None,
+        end_date: str = None,
+        patient_id: str = None,
+        provider_id: str = None,
     ):
         results = []
         for enc in self.encounters.values():

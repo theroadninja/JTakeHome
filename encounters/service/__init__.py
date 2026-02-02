@@ -14,7 +14,7 @@ from fastapi.security import APIKeyHeader
 from pydantic_settings import BaseSettings
 
 from encounters.logging import setup_logging
-from encounters.models.encounters import PendingEncounter
+from encounters.models.encounters import PendingEncounter, expect_iso_date
 from encounters.controllers import controller
 
 # reads a http header field
@@ -88,16 +88,23 @@ async def add_encounter(
 
 @app.get("/encounters")
 async def list_encounters(
-        start_date: str = None,
-        end_date: str = None,
-        patient_id: str = None,
-        provider_id: str = None,
-        key: str = Depends(header_scheme),
+    start_date: str = None,
+    end_date: str = None,
+    patient_id: str = None,
+    provider_id: str = None,
+    key: str = Depends(header_scheme),
 ):
     if key != settings().api_key:
         return header_scheme.make_not_authenticated_error()
 
-    # TODO validate the start and end date!
+    try:
+        if start_date:
+            expect_iso_date(start_date)
+        if end_date:
+            expect_iso_date(end_date)
+    except ValueError as ex:
+        raise HTTPException(status_code=400, detail=str(ex))
+
     username = controller.username_from_key(key)
     return controller.list_encounters(username, start_date, end_date, patient_id, provider_id)
 
